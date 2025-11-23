@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Anonymous Liquidity Scoring — Zama FHEVM</title>
+  <style>
+    /* ===== Neon-flat ultra redesign (IDs preserved, JS intact) ===== */
+    :root{
+      --bg:#0a0b0f; /* canvas */
+      --panel:#10131a; /* cards */
+      --ink:#e6eaf2; /* text */
+      --muted:#9aa3b2; /* secondary */
+      --line:#1c2230; /* borders */
+      --brand:#7dd3fc; /* cyan */
+      --brand-2:#a78bfa; /* purple */
+      --accent:#22d3ee; /* teal */
+      --warn:#f59e0b;
+      --r:14px;
+      --shadow:0 10px 28px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:radial-gradient(1100px 520px at 20% -10%,#202e4d 0%,#0a0b0f 60%) fixed;color:var(--ink);font:15px/1.55 Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Arial}
+    .wrap{max-width:1120px;margin:0 auto;padding:28px}
+    /* Header */
+    header.hero{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+    .logo{font-weight:900;font-size:1.15rem;letter-spacing:.2px}
+    .logo b{color:var(--brand)}
+    .badge{border:1px solid var(--line);color:var(--muted);padding:6px 10px;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01))}
+    .spacer{flex:1}
+    /* Buttons */
+    .btn{appearance:none;border:none;cursor:pointer;border-radius:12px;padding:10px 14px;font-weight:800;color:#06111a;background:linear-gradient(135deg,var(--brand),#c7ebff)}
+    .btn.alt{background:linear-gradient(135deg,var(--accent),#9ff3ff);color:#051013}
+    .btn.purple{background:linear-gradient(135deg,var(--brand-2),#d8ccff);color:#0c0718}
+    .btn.warn{background:linear-gradient(135deg,var(--warn),#ffd19b);color:#201307}
+    /* Grid */
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
+    .card{grid-column:span 12;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+    @media (min-width:980px){.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-5{grid-column:span 5}}
+    /* Section heading */
+    .hrow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+    .dot{width:17px;height:17px;border-radius:17px; margin-top:-5px;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+    h3{margin:0 0 6px;font-size:16px}
+    label{display:block;color:var(--muted);font-weight:800;margin:10px 0 6px}
+    input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#0b111d;color:var(--ink)}
+    pre{white-space:pre-wrap;word-break:break-word;background:#0c121f;padding:10px;border-radius:12px;border:1px dashed var(--line);margin:0}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .status{margin-top:10px;color:var(--muted);font-size:12px}
+    .small{font-size:12px;color:var(--muted)}
+    .result{padding:12px;border-radius:12px;border:1px dashed var(--line);text-align:center;font-weight:900;background:#0c121f}
+    footer{color:var(--muted);text-align:center;margin-top:18px}
+  </style>
+</head>
+<body id='gradient'>
+  <main class="wrap">
+    <header class="hero">
+      <div class="logo">Anonymous <b>Liquidity</b> Scoring</div>
+      <div id="netBadge" class="badge">Network: —</div>
+      <div id="ctrBadge" class="badge">Contract: —</div>
+      <div class="spacer"></div>
+      <button id="connectBtn" class="btn">Connect Wallet</button>
+    </header>
+
+    <section class="grid">
+      <!-- Submit score -->
+      <section class="card span-6">
+        <div class="hrow"><div class="dot"></div><h3>Submit Score (encrypted)</h3></div>
+        <label>Pool ID (string hashed to <span style="font-family:ui-monospace,Menlo,Consolas,monospace">bytes32</span>)</label>
+        <input id="serviceIdStr" placeholder="e.g. pool-usdc-eth"/>
+        <label>Score (0..100)</label>
+        <input id="ratingVal" type="number" min="0" max="100" value="80"/>
+        <div class="row" style="margin-top:8px">
+          <button id="sendBtn" class="btn">Encrypt & Submit</button>
+          <div id="sendStatus" class="small"></div>
+        </div>
+        <div id="sendTx" class="status"></div>
+      </section>
+
+      <!-- Recompute / handle -->
+      <section class="card span-6">
+        <div class="hrow"><div class="dot" style="background:linear-gradient(135deg,var(--brand-2),var(--brand))"></div><h3>Recompute Average / Get Handle</h3></div>
+        <label>Pool ID</label>
+        <input id="serviceId2" placeholder="pool-usdc-eth"/>
+        <div class="row" style="margin-top:8px">
+          <button id="recomputeBtn" class="btn">recomputeAverage()</button>
+          <button id="handleBtn" class="btn alt">avgHandle()</button>
+          <div id="avgStatus" class="small"></div>
+        </div>
+        <div style="margin-top:10px"><label>Handle</label><pre id="avgHandleBox">—</pre></div>
+      </section>
+
+      <!-- Decrypt average -->
+      <section class="card span-7">
+        <div class="hrow"><div class="dot" style="background:linear-gradient(135deg,#34d399,#bbf7d0)"></div><h3>Decrypt Average</h3></div>
+        <div class="row" style="margin-top:8px">
+          <button id="publicDecBtn" class="btn">Public decrypt</button>
+          <button id="userDecBtn" class="btn purple">User decrypt (EIP‑712)</button>
+          <div id="decStatus" class="small"></div>
+        </div>
+        <div style="margin-top:10px"><label>Average (float with 2 decimals)</label><div id="avgOut" class="result">—</div></div>
+      </section>
+
+      <!-- Owner ops -->
+      <section class="card span-5">
+        <div class="hrow"><div class="dot" style="background:linear-gradient(135deg,#94a3b8,#cbd5e1)"></div><h3>Ownership</h3></div>
+        <label>Pool ID</label>
+        <input id="serviceId3" placeholder="pool-usdc-eth"/>
+        <label>New owner</label>
+        <input id="ownerAddr" placeholder="0x..."/>
+        <div class="row" style="margin-top:8px">
+          <button id="setOwnerBtn" class="btn">setPoolOwner</button>
+          <button id="makePublicBtn" class="btn warn">makeAvgPublic</button>
+          <div id="ownerStatus" class="small"></div>
+        </div>
+      </section>
+
+      <!-- Logs -->
+      <section class="card span-12">
+        <div class="hrow"><div class="dot" style="background:linear-gradient(135deg,#60a5fa,#a78bfa)"></div><h3>Logs</h3></div>
+        <div class="row" style="margin-top:8px">
+          <button id="clearLogs" class="btn alt">Clear</button>
+          <button id="copyLogs" class="btn">Copy</button>
+          <label class="small" style="margin-left:auto;display:flex;align-items:center;gap:8px">
+            <input id="debugVerbose" type="checkbox"/> Verbose
+          </label>
+        </div>
+        <pre id="logBox" style="max-height:260px;overflow:auto">—</pre>
+      </section>
+    </section>
+
+    <footer>Built with Zama FHEVM • Relayer SDK 0.2.0 • Ethers v6</footer>
+  </main>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+    <script>
+// Animated gradient (cosmetic)
+var colors = new Array(
+  [10, 15, 40], [20, 0, 50], [0, 35, 60], [40, 15, 25], [10, 50, 35], [30, 30, 30]
+);
+var step = 0; var colorIndices = [0,1,2,3]; var gradientSpeed = 0.002;
+function updateGradient(){
+  if ($===undefined) return;
+  var c0_0 = colors[colorIndices[0]]; var c0_1 = colors[colorIndices[1]]; var c1_0 = colors[colorIndices[2]]; var c1_1 = colors[colorIndices[3]];
+  var istep = 1 - step;
+  var r1 = Math.round(istep*c0_0[0] + step*c0_1[0]); var g1 = Math.round(istep*c0_0[1] + step*c0_1[1]); var b1 = Math.round(istep*c0_0[2] + step*c0_1[2]);
+  var color1 = "rgb("+r1+","+g1+","+b1+")";
+  var r2 = Math.round(istep*c1_0[0] + step*c1_1[0]); var g2 = Math.round(istep*c1_0[1] + step*c1_1[1]); var b2 = Math.round(istep*c1_0[2] + step*c1_1[2]);
+  var color2 = "rgb("+r2+","+g2+","+b2+")";
+  $('#gradient').css({ background: "-webkit-gradient(linear, left top, right top, from("+color1+"), to("+color2+"))"}).css({ background: "-moz-linear-gradient(left, "+color1+" 0%, "+color2+" 100%)"});
+  step += gradientSpeed; if (step >= 1){ step %= 1; colorIndices[0] = colorIndices[1]; colorIndices[2] = colorIndices[3]; colorIndices[1] = (colorIndices[1] + Math.floor(1 + Math.random()*(colors.length - 1))) % colors.length; colorIndices[3] = (colorIndices[3] + Math.floor(1 + Math.random()*(colors.length - 1))) % colors.length; }
+}
+setInterval(updateGradient,10);
+    </script>
+  <script type="module">
+    import { BrowserProvider, Contract, getAddress, keccak256, toUtf8Bytes } from "https://cdn.jsdelivr.net/npm/ethers@6.13.4/+esm";
+    import { initSDK, createInstance, SepoliaConfig } from "https://cdn.zama.org/relayer-sdk-js/0.3.0-5/relayer-sdk-js.js";
+
+    // ===== CONFIG =====
+    const CONFIG = {
+      NETWORK_NAME: "Sepolia",
+      CHAIN_ID_HEX: "0xaa36a7", // 11155111
+      RELAYER_URL: "https://relayer.testnet.zama.cloud",
+      CONTRACT_ADDRESS: "0x96B07cC88d4f72F15D34FC92824433e61bf48a34"
+    };
+
+    // ===== ABI (PrivateLiquidityScores: minimal) =====
+    const ABI = [
+      { "inputs":[{"internalType":"bytes32","name":"poolId","type":"bytes32"},{"internalType":"address","name":"newOwner","type":"address"}],"name":"setPoolOwner","outputs":[],"stateMutability":"nonpayable","type":"function" },
+      { "inputs":[{"internalType":"bytes32","name":"poolId","type":"bytes32"},{"internalType":"bytes32","name":"extScore","type":"bytes32"},{"internalType":"bytes","name":"attestation","type":"bytes"}],"name":"submitScore","outputs":[],"stateMutability":"nonpayable","type":"function" },
+      { "inputs":[{"internalType":"bytes32","name":"poolId","type":"bytes32"}],"name":"recomputeAverage","outputs":[],"stateMutability":"nonpayable","type":"function" },
+      { "inputs":[{"internalType":"bytes32","name":"poolId","type":"bytes32"}],"name":"avgHandle","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function" },
+      { "inputs":[{"internalType":"bytes32","name":"poolId","type":"bytes32"}],"name":"makeAvgPublic","outputs":[],"stateMutability":"nonpayable","type":"function" }
+    ];
+
+    // ===== Helpers =====
+    const $ = s => document.querySelector(s);
+    const toHex = u8 => '0x' + Array.from(u8, b => b.toString(16).padStart(2,'0')).join('');
+    const short = a => a ? a.slice(0,6) + '…' + a.slice(-4) : '—';
+    const toBytes32Id = (s) => keccak256(toUtf8Bytes(String(s)));
+    const nowIso = () => new Date().toISOString().split('T')[1].replace('Z','');
+
+    // ===== Logger =====
+    const logBox = document.getElementById('logBox');
+    const verboseEl = document.getElementById('debugVerbose');
+    const copyBtn = document.getElementById('copyLogs');
+    const clearBtn = document.getElementById('clearLogs');
+    const VERBOSE = () => !!verboseEl?.checked;
+    const hexShort = (x)=> String(x).slice(0,12)+'…'+String(x).slice(-8);
+    function replacer(k,v){ if(typeof v==='string' && v.length>120) return v.slice(0,60)+'…'+v.slice(-30); return v; }
+    function j(v){ try { return typeof v==='string'? v : JSON.stringify(v,replacer,2);} catch { return String(v);} }
+    function log(msg, obj){ const line = `[${nowIso()}] ${msg}`; console.log(line, obj??''); if(!logBox) return; if(logBox.textContent==='—') logBox.textContent=''; logBox.textContent += line + (obj? ('\n'+j(obj)) : '') + '\n'; logBox.scrollTop = logBox.scrollHeight; }
+    function logError(ctx, e){ const err = { message: e?.reason||e?.shortMessage||e?.message||String(e), code: e?.code, data: e?.data, tx: e?.transaction }; log(`❌ ${ctx}`, err); }
+    clearBtn?.addEventListener('click', ()=>{ logBox.textContent=''; log('🧹 logs cleared'); });
+    copyBtn?.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(logBox.textContent); log('📋 logs copied to clipboard'); }catch(e){ logError('copy logs', e);} });
+    window.addEventListener('unhandledrejection', (ev)=> logError('unhandledrejection', ev.reason));
+
+    // ===== UI refs =====
+    const netBadge = $('#netBadge');
+    const ctrBadge = $('#ctrBadge');
+    const connectBtn = $('#connectBtn');
+    const sendBtn = $('#sendBtn');
+    const sendStatus = $('#sendStatus');
+    const sendTx = $('#sendTx');
+    const serviceIdStr = $('#serviceIdStr');
+    const ratingVal = $('#ratingVal');
+    const recomputeBtn = $('#recomputeBtn');
+    const handleBtn = $('#handleBtn');
+    const avgStatus = $('#avgStatus');
+    const avgHandleBox = $('#avgHandleBox');
+    const publicDecBtn = $('#publicDecBtn');
+    const userDecBtn = $('#userDecBtn');
+    const decStatus = $('#decStatus');
+    const avgOut = $('#avgOut');
+    const setOwnerBtn = $('#setOwnerBtn');
+    const makePublicBtn = $('#makePublicBtn');
+    const ownerStatus = $('#ownerStatus');
+
+    // ===== State =====
+    let provider, signer, address, contract, relayer;
+    netBadge.textContent = `Network: ${CONFIG.NETWORK_NAME}`;
+    ctrBadge.textContent = `Contract: ${short(CONFIG.CONTRACT_ADDRESS)}`;
+
+    async function initRelayer(){
+      if (relayer) return relayer;
+      log('🔌 initSDK() & createInstance…', { relayerUrl: CONFIG.RELAYER_URL });
+      await initSDK(); // load WASM
+      relayer = await createInstance({
+        ...SepoliaConfig,
+        relayerUrl: CONFIG.RELAYER_URL,
+        network: window.ethereum,
+        debug: true,
+      });
+      log('✅ Relayer ready');
+      return relayer;
+    }
+
+    async function connect(){
+      if(!window.ethereum) throw new Error('Install MetaMask / compatible wallet');
+      provider = new BrowserProvider(window.ethereum);
+      await provider.send('eth_requestAccounts', []);
+      const net = await provider.getNetwork();
+      log('🔗 Wallet connected', { chainId: Number(net.chainId), hex: '0x'+Number(net.chainId).toString(16) });
+      if (net.chainId !== 11155111n) {
+        try { await provider.send('wallet_switchEthereumChain', [{ chainId: CONFIG.CHAIN_ID_HEX }]); log('🔁 Switched chain', { to: CONFIG.CHAIN_ID_HEX }); } catch(e){ logError('switch chain', e);} }
+      signer = await provider.getSigner();
+      address = await signer.getAddress();
+      contract = new Contract(getAddress(CONFIG.CONTRACT_ADDRESS), ABI, signer);
+      connectBtn.textContent = short(address);
+      log('📄 Contract attached', { contract: CONFIG.CONTRACT_ADDRESS, user: address });
+      await initRelayer();
+      // Wallet events
+      window.ethereum?.on?.('chainChanged', (cid)=> log('⚙️ chainChanged', cid));
+      window.ethereum?.on?.('accountsChanged', (acc)=> log('👤 accountsChanged', acc));
+    }
+
+    connectBtn.addEventListener('click', async ()=>{ try{ await connect(); } catch(e){ logError('connect', e); alert(e.message||e); } });
+
+    // Encrypt + submit score (uint8, 0..100)
+    sendBtn.addEventListener('click', async ()=>{
+      try{
+        if(!contract) await connect();
+        const poolStr = serviceIdStr.value || 'default';
+        const pool = toBytes32Id(poolStr);
+        const num = Math.max(0, Math.min(100, parseInt(ratingVal.value||'80')));
+        log('🧮 Prepare submitScore', { poolStr, pool, score:num });
+        sendStatus.textContent = 'Encrypting…';
+        const r = await initRelayer();
+        const enc = r.createEncryptedInput(getAddress(CONFIG.CONTRACT_ADDRESS), getAddress(address));
+        if (enc.add8) enc.add8(BigInt(num)); else if (enc.addUint8) enc.addUint8(BigInt(num)); else throw new Error('SDK without add8/addUint8');
+        const { handles, inputProof } = await enc.encrypt();
+        const handle = typeof handles[0] === 'string' ? handles[0] : toHex(handles[0]);
+        const att = typeof inputProof === 'string' ? (inputProof.startsWith('0x')? inputProof : ('0x'+inputProof)) : toHex(inputProof);
+        log('🔐 Encrypted payload', { handle: hexShort(handle), attLen: att.length });
+        sendStatus.textContent = 'Sending tx…';
+        const tx = await contract.submitScore(pool, handle, att);
+        sendTx.textContent = 'TX: ' + tx.hash;
+        log('🚀 submitScore sent', { tx: tx.hash });
+        const rec = await tx.wait();
+        log('✅ submitScore confirmed', { blockNumber: rec.blockNumber });
+        sendStatus.textContent = 'Done';
+      }catch(e){ console.error(e); logError('submitScore', e); sendStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+    });
+
+    // Recompute avg
+    recomputeBtn.addEventListener('click', async ()=>{
+      try{
+        if(!contract) await connect();
+        const poolStr = $('#serviceId2').value || 'default';
+        const pool = toBytes32Id(poolStr);
+        log('🧮 recomputeAverage()', { poolStr, pool });
+        avgStatus.textContent = 'Submitting…';
+        const tx = await contract.recomputeAverage(pool);
+        log('🚀 recomputeAverage tx', { tx: tx.hash });
+        await tx.wait();
+        avgStatus.textContent = 'Recomputed';
+        log('✅ average recomputed');
+      }catch(e){ console.error(e); logError('recomputeAverage', e); avgStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+    });
+
+    // Get handle
+    handleBtn.addEventListener('click', async ()=>{
+      try{
+        if(!contract) await connect();
+        const poolStr = $('#serviceId2').value || 'default';
+        const pool = toBytes32Id(poolStr);
+        avgStatus.textContent = 'Fetching…';
+        const h = await contract.avgHandle(pool);
+        avgHandleBox.textContent = String(h);
+        avgStatus.textContent = 'OK';
+        log('📦 avgHandle()', { poolStr, pool, handle: h });
+      }catch(e){ console.error(e); logError('avgHandle', e); avgStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+    });
+
+    // Public decrypt (owner must have called makeAvgPublic)
+    publicDecBtn.addEventListener('click', async ()=>{
+      try{
+        const h = avgHandleBox.textContent.trim();
+        if(!h || h==='—') throw new Error('Get handle first');
+        decStatus.textContent = 'publicDecrypt…';
+        log('🔓 publicDecrypt begin', { handle: h });
+        const r = await initRelayer();
+        const out = await r.publicDecrypt([h]);
+        const raw = out[h] ?? out[Object.keys(out).find(k=>k.toLowerCase()===h.toLowerCase())];
+        const val = Number(raw);
+        avgOut.textContent = isFinite(val) ? (val).toFixed(2) : String(raw);
+        log('🔎 publicDecrypt result', { raw, parsed: avgOut.textContent });
+        decStatus.textContent = 'Done';
+      }catch(e){ console.error(e); logError('publicDecrypt', e); decStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+    });
+
+    // User decrypt (private access via EIP-712)
+    userDecBtn.addEventListener('click', async ()=>{
+      try{
+        if(!window.ethereum) throw new Error('Connect wallet');
+        const h = avgHandleBox.textContent.trim();
+        if(!h || h==='—') throw new Error('Get handle first');
+        decStatus.textContent = 'EIP-712…';
+        const r = await initRelayer();
+        const kp = r.generateKeypair();
+        const startTs = Math.floor(Date.now()/1000).toString();
+        const days = '7';
+        const eip = r.createEIP712(kp.publicKey, [getAddress(CONFIG.CONTRACT_ADDRESS)], startTs, days);
+        log('📝 EIP-712 prepared', { domain: eip.domain, validDays: days, startTs });
+        const provider2 = new BrowserProvider(window.ethereum);
+        const signer2 = await provider2.getSigner();
+        const signature = await signer2.signTypedData(
+          eip.domain,
+          { UserDecryptRequestVerification: eip.types.UserDecryptRequestVerification },
+          eip.message
+        );
+        log('✍️  EIP-712 signed', { sigLen: signature.length });
+        decStatus.textContent = 'userDecrypt…';
+        const out = await r.userDecrypt(
+          [{ handle: h, contractAddress: getAddress(CONFIG.CONTRACT_ADDRESS) }],
+          kp.privateKey,
+          kp.publicKey,
+          signature.replace(/^0x/, ''),
+          [getAddress(CONFIG.CONTRACT_ADDRESS)],
+          await signer2.getAddress(),
+          startTs,
+          days
+        );
+        const raw = out[h] ?? out[Object.keys(out).find(k=>k.toLowerCase()===h.toLowerCase())];
+        const val = Number(raw);
+        avgOut.textContent = isFinite(val) ? (val).toFixed(2) : String(raw);
+        log('🔎 userDecrypt result', { raw, parsed: avgOut.textContent });
+        decStatus.textContent = 'Done';
+      }catch(e){ console.error(e); logError('userDecrypt', e); decStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+    });
+
+    // Owner ops
+    setOwnerBtn.addEventListener('click', async ()=>{
+      try{
+        if(!contract) await connect();
+        const poolStr = $('#serviceId3').value || 'default';
+        const pool = toBytes32Id(poolStr);
+        const newOwner = getAddress($('#ownerAddr').value.trim());
+        ownerStatus.textContent = 'Submitting…';
+        log('👑 setPoolOwner()', { poolStr, pool, newOwner });
+        const tx = await contract.setPoolOwner(pool, newOwner);
+        log('🚀 setPoolOwner tx', { tx: tx.hash });
+        await tx.wait();
+        ownerStatus.textContent = 'Owner set';
+        log('✅ pool initialized / owner set');
+      }catch(e){ console.error(e); logError('setPoolOwner', e); ownerStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+    });
+
+    makePublicBtn.addEventListener('click', async ()=>{
+      try{
+        if(!contract) await connect();
+        const poolStr = $('#serviceId3').value || 'default';
+        const pool = toBytes32Id(poolStr);
+        ownerStatus.textContent = 'Submitting…';
+        log('🌍 makeAvgPublic()', { poolStr, pool });
+        const tx = await contract.makeAvgPublic(pool);
+        log('🚀 makeAvgPublic tx', { tx: tx.hash });
+        await tx.wait();
+        ownerStatus.textContent = 'Avg is public now';
+        log('✅ avg made public');
+      }catch(e){ console.error(e); logError('makeAvgPublic', e); ownerStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+    });
+  </script>
+</body>
+</html>
