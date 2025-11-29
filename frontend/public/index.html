@@ -3,124 +3,202 @@
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Anonymous Liquidity Scoring — Zama FHEVM</title>
+  <title>Anonymous Salary Reveal — Zama FHEVM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&display=swap" rel="stylesheet">
   <style>
-    /* ===== Neon-flat ultra redesign (IDs preserved, JS intact) ===== */
+    /* ===== Greenline Dollar UI (square, green, $-themed background; IDs preserved for JS) ===== */
     :root{
-      --bg:#0a0b0f; /* canvas */
-      --panel:#10131a; /* cards */
-      --ink:#e6eaf2; /* text */
-      --muted:#9aa3b2; /* secondary */
-      --line:#1c2230; /* borders */
-      --brand:#7dd3fc; /* cyan */
-      --brand-2:#a78bfa; /* purple */
-      --accent:#22d3ee; /* teal */
-      --warn:#f59e0b;
-      --r:14px;
+      --bg:#07100b;             /* canvas */
+      --ink:#e6f6ea;            /* text */
+      --muted:#a2c7a7;          /* secondary */
+      --line:#16341f;           /* borders */
+      --panel:#0a160e;          /* cards */
+      --brand:#22c55e;          /* green */
+      --brand-deep:#166534;     /* deep green */
+      --accent:#10b981;         /* mint */
+      --warn:#f59e0b;           /* amber */
       --shadow:0 10px 28px rgba(0,0,0,.35);
     }
+
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{margin:0;background:radial-gradient(1100px 520px at 20% -10%,#202e4d 0%,#0a0b0f 60%) fixed;color:var(--ink);font:15px/1.55 Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Arial}
-    .wrap{max-width:1120px;margin:0 auto;padding:28px}
+    body{
+      margin:0;color:var(--ink);
+      font:15px/1.6 Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,Arial;
+      background:radial-gradient(1200px 700px at 10% -10%, #0e2c1a 0%, var(--bg) 60%) fixed;
+    }
+
+    /* Dollar pattern + grid overlay */
+    body::before{
+      content:"";position:fixed;inset:0;z-index:-2;opacity:.14;pointer-events:none;
+      background:
+        repeating-linear-gradient(0deg, transparent 0 29px, rgba(16,185,129,.06) 29px 30px),
+        repeating-linear-gradient(90deg, transparent 0 29px, rgba(16,185,129,.06) 29px 30px),
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><rect width='160' height='160' fill='none'/><text x='14' y='88' font-family='ui-monospace,Menlo,Consolas,monospace' font-size='64' fill='%2322c55e' fill-opacity='0.14'>$</text><text x='90' y='150' font-family='ui-monospace,Menlo,Consolas,monospace' font-size='64' fill='%23166534' fill-opacity='0.12'>$</text></svg>");
+      background-size:auto, auto, 200px 200px;
+    }
+    body::after{
+      content:"";position:fixed;inset:-15%;z-index:-1;pointer-events:none;
+      background:radial-gradient(600px 420px at 85% 20%, rgba(16,185,129,.18), transparent 70%),
+                 radial-gradient(800px 620px at 20% 80%, rgba(34,197,94,.18), transparent 70%);
+      filter:blur(40px);
+    }
+
+    .wrap{max-width:1160px;margin:0 auto;padding:28px}
+
     /* Header */
-    header.hero{display:flex;align-items:center;gap:12px;margin-bottom:24px}
-    .logo{font-weight:900;font-size:1.15rem;letter-spacing:.2px}
+    header.hero{display:flex;flex-direction:column;align-items:stretch;gap:14px;margin-bottom:22px}
+    .logo{display:none}
     .logo b{color:var(--brand)}
-    .badge{border:1px solid var(--line);color:var(--muted);padding:6px 10px;border-radius:999px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.01))}
+    .badge{border:1px solid var(--line);color:var(--muted);padding:7px 12px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.02));backdrop-filter:blur(6px)}
     .spacer{flex:1}
-    /* Buttons */
-    .btn{appearance:none;border:none;cursor:pointer;border-radius:12px;padding:10px 14px;font-weight:800;color:#06111a;background:linear-gradient(135deg,var(--brand),#c7ebff)}
-    .btn.alt{background:linear-gradient(135deg,var(--accent),#9ff3ff);color:#051013}
-    .btn.purple{background:linear-gradient(135deg,var(--brand-2),#d8ccff);color:#0c0718}
-    .btn.warn{background:linear-gradient(135deg,var(--warn),#ffd19b);color:#201307}
-    /* Grid */
+
+    /* Buttons — square, green */
+    .btn{appearance:none;border:1px solid #1f8f42;cursor:pointer;padding:11px 15px;font-weight:800;color:#07100b;background:linear-gradient(135deg,#16a34a,#86efac);box-shadow:none}
+    .btn.alt{border-color:#0e7a58;background:linear-gradient(135deg,#064e3b,#10b981);color:#eaffef}
+    .btn.warn{border-color:#8a6107;background:linear-gradient(135deg,var(--warn),#ffe7b0);color:#1f1604}
+    .btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+
+    /* Grid & cards — square corners */
     .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
-    .card{grid-column:span 12;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow)}
+    .card{grid-column:span 12;background:var(--panel);border:1px solid var(--line);padding:20px;box-shadow:var(--shadow);transform:translateY(0);transition:transform .25s ease, box-shadow .25s ease;animation:cardIn .7s ease both}
     @media (min-width:980px){.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-5{grid-column:span 5}}
+
     /* Section heading */
     .hrow{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-    .dot{width:17px;height:17px;border-radius:17px; margin-top:-5px;background:linear-gradient(135deg,var(--brand),var(--brand-2));box-shadow:inset 0 0 0 1px rgba(255,255,255,.12)}
+    .chip{height:22px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:11px;letter-spacing:.3px;border:1px solid var(--line);background:rgba(34,197,94,.08);color:#dfffe9}
+
     h3{margin:0 0 6px;font-size:16px}
     label{display:block;color:var(--muted);font-weight:800;margin:10px 0 6px}
-    input{width:100%;padding:12px;border-radius:12px;border:1px solid var(--line);background:#0b111d;color:var(--ink)}
-    pre{white-space:pre-wrap;word-break:break-word;background:#0c121f;padding:10px;border-radius:12px;border:1px dashed var(--line);margin:0}
+
+    /* Inputs — square */
+    input{width:100%;padding:12px 13px;border:1px solid var(--line);background:#0a1c11;color:var(--ink)}
+    input:focus{outline:none;border-color:#1f8f42;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+
     .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
     .status{margin-top:10px;color:var(--muted);font-size:12px}
     .small{font-size:12px;color:var(--muted)}
-    .result{padding:12px;border-radius:12px;border:1px dashed var(--line);text-align:center;font-weight:900;background:#0c121f}
+
+    /* Output — square */
+    pre{white-space:pre-wrap;word-break:break-word;background:#0b1a10;padding:12px;border:1px dashed var(--line);margin:0}
+    .result{padding:14px;border:1px dashed var(--line);text-align:center;font-weight:900;background:#0b1a10}
+
     footer{color:var(--muted);text-align:center;margin-top:18px}
+  /* --- Centered title styles & animations --- */
+    .topbar{display:flex;align-items:center;gap:12px}
+    .titleWrap{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;margin-top:6px}
+    .dollarTitle{font-family:'Cinzel', Georgia, serif;letter-spacing:.12em;font-weight:900;font-size:34px;line-height:1.1;margin:2px 0;background:linear-gradient(180deg,#eaffef 0%, #a7f3d0 40%, #34d399 70%, #065f46 100%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 2px 0 rgba(0,0,0,.25)}
+    .subtitle{color:var(--muted);font-weight:800;letter-spacing:.2em;text-transform:uppercase}
+    @media (min-width:980px){ .dollarTitle{font-size:44px} }
+
+    /* Cards entrance + hover */
+    @keyframes cardIn{from{opacity:0;transform:translateY(14px) scale(.98)} to{opacity:1;transform:translateY(0) scale(1)}}
+    .card:hover{transform:translateY(-2px)}
+    .grid > .card:nth-of-type(1){animation-delay:.05s}
+    .grid > .card:nth-of-type(2){animation-delay:.10s}
+    .grid > .card:nth-of-type(3){animation-delay:.15s}
+    .grid > .card:nth-of-type(4){animation-delay:.20s}
+    .grid > .card:nth-of-type(5){animation-delay:.25s}
+    .grid > .card:nth-of-type(6){animation-delay:.30s}
+
+    /* Animated accent underline for h3 */
+    h3{position:relative;padding-bottom:6px}
+    h3:after{content:"";position:absolute;left:0;right:0;height:2px;bottom:-2px;background:linear-gradient(90deg,transparent,rgba(16,185,129,.8),transparent);transform:scaleX(0);transform-origin:left;animation:underline .9s .3s ease-out both}
+    @keyframes underline{to{transform:scaleX(1)}}
   </style>
 </head>
-<body id='gradient'>
+<body id="gradient">
   <main class="wrap">
     <header class="hero">
-      <div class="logo">Anonymous <b>Liquidity</b> Scoring</div>
-      <div id="netBadge" class="badge">Network: —</div>
-      <div id="ctrBadge" class="badge">Contract: —</div>
-      <div class="spacer"></div>
-      <button id="connectBtn" class="btn">Connect Wallet</button>
+      <div class="topbar">
+        <div id="netBadge" class="badge">Network: —</div>
+        <div id="ctrBadge" class="badge">Contract: —</div>
+        <div class="spacer"></div>
+        <button id="connectBtn" class="btn">Connect Wallet</button>
+      </div>
+      <div class="titleWrap">
+        <h1 class="dollarTitle">ANONYMOUS SALARY REVEAL</h1>
+        <div class="subtitle">$ private by role &amp; region $</div>
+      </div>
     </header>
 
     <section class="grid">
-      <!-- Submit score -->
+      <!-- Publish post -->
       <section class="card span-6">
-        <div class="hrow"><div class="dot"></div><h3>Submit Score (encrypted)</h3></div>
-        <label>Pool ID (string hashed to <span style="font-family:ui-monospace,Menlo,Consolas,monospace">bytes32</span>)</label>
-        <input id="serviceIdStr" placeholder="e.g. pool-usdc-eth"/>
-        <label>Score (0..100)</label>
-        <input id="ratingVal" type="number" min="0" max="100" value="80"/>
-        <div class="row" style="margin-top:8px">
-          <button id="sendBtn" class="btn">Encrypt & Submit</button>
-          <div id="sendStatus" class="small"></div>
+        <div class="hrow"><span class="chip">PUBLISH</span><h3>Publish Salary Post (encrypted)</h3></div>
+        <label>Salary (integer, minor units e.g. cents)</label>
+        <input id="salaryVal" type="number" min="0" max="100000000" value="1200000"/>
+        <div class="row">
+          <div style="flex:1">
+            <label>Role code (uint16)</label>
+            <input id="roleVal" type="number" min="0" max="65535" value="101"/>
+          </div>
+          <div style="flex:1">
+            <label>Region code (uint16)</label>
+            <input id="regionVal" type="number" min="0" max="65535" value="840"/>
+          </div>
         </div>
-        <div id="sendTx" class="status"></div>
+        <div class="row" style="margin-top:10px">
+          <button id="publishBtn" class="btn">Encrypt & Publish</button>
+          <button id="clearLogs" class="btn ghost">Clear Logs</button>
+          <div id="pubStatus" class="small"></div>
+        </div>
+        <div class="status">New Post ID: <span id="newPostId">—</span></div>
+        <div id="pubTx" class="status"></div>
       </section>
 
-      <!-- Recompute / handle -->
+      <!-- Reveal if match -->
       <section class="card span-6">
-        <div class="hrow"><div class="dot" style="background:linear-gradient(135deg,var(--brand-2),var(--brand))"></div><h3>Recompute Average / Get Handle</h3></div>
-        <label>Pool ID</label>
-        <input id="serviceId2" placeholder="pool-usdc-eth"/>
-        <div class="row" style="margin-top:8px">
-          <button id="recomputeBtn" class="btn">recomputeAverage()</button>
-          <button id="handleBtn" class="btn alt">avgHandle()</button>
-          <div id="avgStatus" class="small"></div>
+        <div class="hrow"><span class="chip">REVEAL</span><h3>Reveal Salary If (role, region) Match</h3></div>
+        <label>Post ID</label>
+        <input id="revealPostId" type="number" min="0" value="0"/>
+        <div class="row">
+          <div style="flex:1">
+            <label>Your role code (uint16)</label>
+            <input id="myRole" type="number" min="0" max="65535" value="101"/>
+          </div>
+          <div style="flex:1">
+            <label>Your region code (uint16)</label>
+            <input id="myRegion" type="number" min="0" max="65535" value="840"/>
+          </div>
         </div>
-        <div style="margin-top:10px"><label>Handle</label><pre id="avgHandleBox">—</pre></div>
-      </section>
-
-      <!-- Decrypt average -->
-      <section class="card span-7">
-        <div class="hrow"><div class="dot" style="background:linear-gradient(135deg,#34d399,#bbf7d0)"></div><h3>Decrypt Average</h3></div>
-        <div class="row" style="margin-top:8px">
-          <button id="publicDecBtn" class="btn">Public decrypt</button>
-          <button id="userDecBtn" class="btn purple">User decrypt (EIP‑712)</button>
+        <div class="row" style="margin-top:10px">
+          <button id="revealBtn" class="btn alt">Encrypt & Request Reveal</button>
+          <div id="revStatus" class="small"></div>
+        </div>
+        <div class="status">Reveal Handle: <span id="revealHandle">—</span></div>
+        <div class="row" style="margin-top:10px">
+          <button id="userDecBtn" class="btn">User decrypt (EIP‑712)</button>
           <div id="decStatus" class="small"></div>
         </div>
-        <div style="margin-top:10px"><label>Average (float with 2 decimals)</label><div id="avgOut" class="result">—</div></div>
+        <div style="margin-top:8px"><label>Decrypted result (0 = no match)</label><div id="revealOut" class="result">—</div></div>
       </section>
 
-      <!-- Owner ops -->
-      <section class="card span-5">
-        <div class="hrow"><div class="dot" style="background:linear-gradient(135deg,#94a3b8,#cbd5e1)"></div><h3>Ownership</h3></div>
-        <label>Pool ID</label>
-        <input id="serviceId3" placeholder="pool-usdc-eth"/>
-        <label>New owner</label>
-        <input id="ownerAddr" placeholder="0x..."/>
-        <div class="row" style="margin-top:8px">
-          <button id="setOwnerBtn" class="btn">setPoolOwner</button>
-          <button id="makePublicBtn" class="btn warn">makeAvgPublic</button>
+      <!-- Owner tools -->
+      <section class="card span-7">
+        <div class="hrow"><span class="chip">OWNER</span><h3>Owner Utilities</h3></div>
+        <label>Post ID</label>
+        <input id="ownerPostId" type="number" min="0" value="0"/>
+        <div class="row" style="margin-top:10px">
+          <button id="makePublicBtn" class="btn warn">makeSalaryPublic()</button>
+          <button id="getSalaryHandleBtn" class="btn">salaryHandle()</button>
           <div id="ownerStatus" class="small"></div>
         </div>
+        <div style="margin-top:10px"><label>Salary handle</label><pre id="salaryHandleBox">—</pre></div>
+        <div class="row" style="margin-top:10px">
+          <button id="publicDecBtn" class="btn alt">Public decrypt</button>
+          <div id="pubDecStatus" class="small"></div>
+        </div>
+        <div style="margin-top:8px"><label>Public salary (if made public)</label><div id="publicSalaryOut" class="result">—</div></div>
       </section>
 
       <!-- Logs -->
-      <section class="card span-12">
-        <div class="hrow"><div class="dot" style="background:linear-gradient(135deg,#60a5fa,#a78bfa)"></div><h3>Logs</h3></div>
+      <section class="card span-5">
+        <div class="hrow"><span class="chip" style="background:rgba(34,197,94,.14)">LOGS</span><h3>Debug console</h3></div>
         <div class="row" style="margin-top:8px">
-          <button id="clearLogs" class="btn alt">Clear</button>
-          <button id="copyLogs" class="btn">Copy</button>
+          <button id="copyLogs" class="btn alt">Copy</button>
           <label class="small" style="margin-left:auto;display:flex;align-items:center;gap:8px">
             <input id="debugVerbose" type="checkbox"/> Verbose
           </label>
@@ -131,99 +209,97 @@
 
     <footer>Built with Zama FHEVM • Relayer SDK 0.2.0 • Ethers v6</footer>
   </main>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
-    <script>
-// Animated gradient (cosmetic)
-var colors = new Array(
-  [10, 15, 40], [20, 0, 50], [0, 35, 60], [40, 15, 25], [10, 50, 35], [30, 30, 30]
-);
-var step = 0; var colorIndices = [0,1,2,3]; var gradientSpeed = 0.002;
-function updateGradient(){
-  if ($===undefined) return;
-  var c0_0 = colors[colorIndices[0]]; var c0_1 = colors[colorIndices[1]]; var c1_0 = colors[colorIndices[2]]; var c1_1 = colors[colorIndices[3]];
-  var istep = 1 - step;
-  var r1 = Math.round(istep*c0_0[0] + step*c0_1[0]); var g1 = Math.round(istep*c0_0[1] + step*c0_1[1]); var b1 = Math.round(istep*c0_0[2] + step*c0_1[2]);
-  var color1 = "rgb("+r1+","+g1+","+b1+")";
-  var r2 = Math.round(istep*c1_0[0] + step*c1_1[0]); var g2 = Math.round(istep*c1_0[1] + step*c1_1[1]); var b2 = Math.round(istep*c1_0[2] + step*c1_1[2]);
-  var color2 = "rgb("+r2+","+g2+","+b2+")";
-  $('#gradient').css({ background: "-webkit-gradient(linear, left top, right top, from("+color1+"), to("+color2+"))"}).css({ background: "-moz-linear-gradient(left, "+color1+" 0%, "+color2+" 100%)"});
-  step += gradientSpeed; if (step >= 1){ step %= 1; colorIndices[0] = colorIndices[1]; colorIndices[2] = colorIndices[3]; colorIndices[1] = (colorIndices[1] + Math.floor(1 + Math.random()*(colors.length - 1))) % colors.length; colorIndices[3] = (colorIndices[3] + Math.floor(1 + Math.random()*(colors.length - 1))) % colors.length; }
-}
-setInterval(updateGradient,10);
-    </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.2/jquery.min.js"></script>
+  <script>
+  // Background tween (cosmetic) — green hues
+  var colors=[[5,20,10],[10,40,22],[8,28,18],[12,30,15],[6,26,14],[14,24,14]];var step=0,colorIndices=[0,1,2,3],gradientSpeed=0.002;
+  function updateGradient(){if ($===undefined) return;var c0_0=colors[colorIndices[0]],c0_1=colors[colorIndices[1]],c1_0=colors[colorIndices[2]],c1_1=colors[colorIndices[3]];var istep=1-step;var r1=Math.round(istep*c0_0[0]+step*c0_1[0]);var g1=Math.round(istep*c0_0[1]+step*c0_1[1]);var b1=Math.round(istep*c0_0[2]+step*c0_1[2]);var color1="rgb("+r1+","+g1+","+b1+")";var r2=Math.round(istep*c1_0[0]+step*c1_1[0]);var g2=Math.round(istep*c1_0[1]+step*c1_1[1]);var b2=Math.round(istep*c1_0[2]+step*c1_1[2]);var color2="rgb("+r2+","+g2+","+b2+")";$('#gradient').css({background:"-webkit-gradient(linear, left top, right top, from("+color1+"), to("+color2+"))"}).css({background:"-moz-linear-gradient(left, "+color1+" 0%, "+color2+" 100%)"});step+=gradientSpeed;if(step>=1){step%=1;colorIndices[0]=colorIndices[1];colorIndices[2]=colorIndices[3];colorIndices[1]=(colorIndices[1]+Math.floor(1+Math.random()*(colors.length-1)))%colors.length;colorIndices[3]=(colorIndices[3]+Math.floor(1+Math.random()*(colors.length-1)))%colors.length;}}setInterval(updateGradient,10);
+  </script>
+
   <script type="module">
-    import { BrowserProvider, Contract, getAddress, keccak256, toUtf8Bytes } from "https://cdn.jsdelivr.net/npm/ethers@6.13.4/+esm";
+    import { BrowserProvider, Contract, Interface, getAddress } from "https://cdn.jsdelivr.net/npm/ethers@6.13.4/+esm";
     import { initSDK, createInstance, SepoliaConfig } from "https://cdn.zama.org/relayer-sdk-js/0.3.0-5/relayer-sdk-js.js";
 
     // ===== CONFIG =====
     const CONFIG = {
       NETWORK_NAME: "Sepolia",
       CHAIN_ID_HEX: "0xaa36a7", // 11155111
-      RELAYER_URL: "https://relayer.testnet.zama.cloud",
-      CONTRACT_ADDRESS: "0x96B07cC88d4f72F15D34FC92824433e61bf48a34"
+      RELAYER_URL: "https://relayer.testnet.zama.org",
+      GATEWAY_URL: "https://gateway.testnet.zama.org",
+      CONTRACT_ADDRESS: "0x9846fd156864cbb84fe3Ca9aBE352BbEaBC2443A" // <-- PUT YOUR ADDRESS
     };
 
-    // ===== ABI (PrivateLiquidityScores: minimal) =====
+    // ===== ABI =====
     const ABI = [
-      { "inputs":[{"internalType":"bytes32","name":"poolId","type":"bytes32"},{"internalType":"address","name":"newOwner","type":"address"}],"name":"setPoolOwner","outputs":[],"stateMutability":"nonpayable","type":"function" },
-      { "inputs":[{"internalType":"bytes32","name":"poolId","type":"bytes32"},{"internalType":"bytes32","name":"extScore","type":"bytes32"},{"internalType":"bytes","name":"attestation","type":"bytes"}],"name":"submitScore","outputs":[],"stateMutability":"nonpayable","type":"function" },
-      { "inputs":[{"internalType":"bytes32","name":"poolId","type":"bytes32"}],"name":"recomputeAverage","outputs":[],"stateMutability":"nonpayable","type":"function" },
-      { "inputs":[{"internalType":"bytes32","name":"poolId","type":"bytes32"}],"name":"avgHandle","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function" },
-      { "inputs":[{"internalType":"bytes32","name":"poolId","type":"bytes32"}],"name":"makeAvgPublic","outputs":[],"stateMutability":"nonpayable","type":"function" }
+      { "anonymous":false, "inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":true,"internalType":"address","name":"owner","type":"address"}], "name":"PostPublished","type":"event" },
+      { "anonymous":false, "inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"},{"indexed":true,"internalType":"address","name":"requester","type":"address"},{"indexed":false,"internalType":"bytes32","name":"revealHandle","type":"bytes32"}], "name":"SalaryRevealed","type":"event" },
+      { "anonymous":false, "inputs":[{"indexed":true,"internalType":"uint256","name":"id","type":"uint256"}], "name":"SalaryMadePublic","type":"event" },
+
+      { "inputs":[{"internalType":"bytes32","name":"encSalary","type":"bytes32"},{"internalType":"bytes32","name":"encRoleId","type":"bytes32"},{"internalType":"bytes32","name":"encRegionId","type":"bytes32"},{"internalType":"bytes","name":"attestation","type":"bytes"}],"name":"publish","outputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"stateMutability":"nonpayable","type":"function" },
+      { "inputs":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"bytes32","name":"requesterRole","type":"bytes32"},{"internalType":"bytes32","name":"requesterRegion","type":"bytes32"},{"internalType":"bytes","name":"attestation","type":"bytes"}],"name":"revealIfMatch","outputs":[{"internalType":"bytes32","name":"handle","type":"bytes32"}],"stateMutability":"nonpayable","type":"function" },
+      { "inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"salaryHandle","outputs":[{"internalType":"bytes32","name":"","type":"bytes32"}],"stateMutability":"view","type":"function" },
+      { "inputs":[{"internalType":"uint256","name":"id","type":"uint256"}],"name":"makeSalaryPublic","outputs":[],"stateMutability":"nonpayable","type":"function" }
     ];
+
+    const IFACE = new Interface(ABI);
 
     // ===== Helpers =====
     const $ = s => document.querySelector(s);
     const toHex = u8 => '0x' + Array.from(u8, b => b.toString(16).padStart(2,'0')).join('');
     const short = a => a ? a.slice(0,6) + '…' + a.slice(-4) : '—';
-    const toBytes32Id = (s) => keccak256(toUtf8Bytes(String(s)));
     const nowIso = () => new Date().toISOString().split('T')[1].replace('Z','');
 
-    // ===== Logger =====
-    const logBox = document.getElementById('logBox');
-    const verboseEl = document.getElementById('debugVerbose');
-    const copyBtn = document.getElementById('copyLogs');
-    const clearBtn = document.getElementById('clearLogs');
-    const VERBOSE = () => !!verboseEl?.checked;
-    const hexShort = (x)=> String(x).slice(0,12)+'…'+String(x).slice(-8);
-    function replacer(k,v){ if(typeof v==='string' && v.length>120) return v.slice(0,60)+'…'+v.slice(-30); return v; }
-    function j(v){ try { return typeof v==='string'? v : JSON.stringify(v,replacer,2);} catch { return String(v);} }
+    function j(v){ try { return typeof v==='string'? v : JSON.stringify(v,(k,val)=> (typeof val==='string'&&val.length>120)? val.slice(0,60)+'…'+val.slice(-30): val,2);} catch { return String(v);} }
     function log(msg, obj){ const line = `[${nowIso()}] ${msg}`; console.log(line, obj??''); if(!logBox) return; if(logBox.textContent==='—') logBox.textContent=''; logBox.textContent += line + (obj? ('\n'+j(obj)) : '') + '\n'; logBox.scrollTop = logBox.scrollHeight; }
     function logError(ctx, e){ const err = { message: e?.reason||e?.shortMessage||e?.message||String(e), code: e?.code, data: e?.data, tx: e?.transaction }; log(`❌ ${ctx}`, err); }
-    clearBtn?.addEventListener('click', ()=>{ logBox.textContent=''; log('🧹 logs cleared'); });
-    copyBtn?.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(logBox.textContent); log('📋 logs copied to clipboard'); }catch(e){ logError('copy logs', e);} });
-    window.addEventListener('unhandledrejection', (ev)=> logError('unhandledrejection', ev.reason));
 
     // ===== UI refs =====
     const netBadge = $('#netBadge');
     const ctrBadge = $('#ctrBadge');
     const connectBtn = $('#connectBtn');
-    const sendBtn = $('#sendBtn');
-    const sendStatus = $('#sendStatus');
-    const sendTx = $('#sendTx');
-    const serviceIdStr = $('#serviceIdStr');
-    const ratingVal = $('#ratingVal');
-    const recomputeBtn = $('#recomputeBtn');
-    const handleBtn = $('#handleBtn');
-    const avgStatus = $('#avgStatus');
-    const avgHandleBox = $('#avgHandleBox');
-    const publicDecBtn = $('#publicDecBtn');
+
+    const salaryVal = $('#salaryVal');
+    const roleVal = $('#roleVal');
+    const regionVal = $('#regionVal');
+    const publishBtn = $('#publishBtn');
+    const pubStatus = $('#pubStatus');
+    const pubTx = $('#pubTx');
+    const newPostIdEl = $('#newPostId');
+
+    const revealPostId = $('#revealPostId');
+    const myRole = $('#myRole');
+    const myRegion = $('#myRegion');
+    const revealBtn = $('#revealBtn');
+    const revStatus = $('#revStatus');
+    const revealHandleEl = $('#revealHandle');
     const userDecBtn = $('#userDecBtn');
     const decStatus = $('#decStatus');
-    const avgOut = $('#avgOut');
-    const setOwnerBtn = $('#setOwnerBtn');
+    const revealOut = $('#revealOut');
+
+    const ownerPostId = $('#ownerPostId');
     const makePublicBtn = $('#makePublicBtn');
+    const getSalaryHandleBtn = $('#getSalaryHandleBtn');
     const ownerStatus = $('#ownerStatus');
+    const salaryHandleBox = $('#salaryHandleBox');
+    const publicDecBtn = $('#publicDecBtn');
+    const pubDecStatus = $('#pubDecStatus');
+    const publicSalaryOut = $('#publicSalaryOut');
+
+    const logBox = document.getElementById('logBox');
+    const copyBtn = document.getElementById('copyLogs');
+    const clearBtn = document.getElementById('clearLogs');
 
     // ===== State =====
     let provider, signer, address, contract, relayer;
     netBadge.textContent = `Network: ${CONFIG.NETWORK_NAME}`;
     ctrBadge.textContent = `Contract: ${short(CONFIG.CONTRACT_ADDRESS)}`;
 
+    // ===== Relayer init =====
     async function initRelayer(){
       if (relayer) return relayer;
       log('🔌 initSDK() & createInstance…', { relayerUrl: CONFIG.RELAYER_URL });
-      await initSDK(); // load WASM
+      await initSDK();
       relayer = await createInstance({
         ...SepoliaConfig,
         relayerUrl: CONFIG.RELAYER_URL,
@@ -234,6 +310,7 @@ setInterval(updateGradient,10);
       return relayer;
     }
 
+    // ===== Wallet connect =====
     async function connect(){
       if(!window.ethereum) throw new Error('Install MetaMask / compatible wallet');
       provider = new BrowserProvider(window.ethereum);
@@ -248,107 +325,86 @@ setInterval(updateGradient,10);
       connectBtn.textContent = short(address);
       log('📄 Contract attached', { contract: CONFIG.CONTRACT_ADDRESS, user: address });
       await initRelayer();
-      // Wallet events
-      window.ethereum?.on?.('chainChanged', (cid)=> log('⚙️ chainChanged', cid));
-      window.ethereum?.on?.('accountsChanged', (acc)=> log('👤 accountsChanged', acc));
     }
-
     connectBtn.addEventListener('click', async ()=>{ try{ await connect(); } catch(e){ logError('connect', e); alert(e.message||e); } });
 
-    // Encrypt + submit score (uint8, 0..100)
-    sendBtn.addEventListener('click', async ()=>{
+    // ===== Helpers for encryption =====
+    function add16(enc, v){ if(enc.add16) enc.add16(BigInt(v)); else if (enc.addUint16) enc.addUint16(BigInt(v)); else throw new Error('SDK: add16 not found'); }
+    function add32(enc, v){ if(enc.add32) enc.add32(BigInt(v)); else if (enc.addUint32) enc.addUint32(BigInt(v)); else throw new Error('SDK: add32 not found'); }
+
+    // ===== Publish =====
+    publishBtn.addEventListener('click', async ()=>{
       try{
         if(!contract) await connect();
-        const poolStr = serviceIdStr.value || 'default';
-        const pool = toBytes32Id(poolStr);
-        const num = Math.max(0, Math.min(100, parseInt(ratingVal.value||'80')));
-        log('🧮 Prepare submitScore', { poolStr, pool, score:num });
-        sendStatus.textContent = 'Encrypting…';
+        const salary = Math.max(0, Math.min(100_000_000, parseInt(salaryVal.value||'0')));
+        const role = Math.max(0, Math.min(65535, parseInt(roleVal.value||'0')));
+        const region = Math.max(0, Math.min(65535, parseInt(regionVal.value||'0')));
+        pubStatus.textContent = 'Encrypting…';
         const r = await initRelayer();
         const enc = r.createEncryptedInput(getAddress(CONFIG.CONTRACT_ADDRESS), getAddress(address));
-        if (enc.add8) enc.add8(BigInt(num)); else if (enc.addUint8) enc.addUint8(BigInt(num)); else throw new Error('SDK without add8/addUint8');
+        add32(enc, salary); add16(enc, role); add16(enc, region);
         const { handles, inputProof } = await enc.encrypt();
-        const handle = typeof handles[0] === 'string' ? handles[0] : toHex(handles[0]);
+        const [hSalary, hRole, hRegion] = handles.map(h=> (typeof h==='string'? h : toHex(h)));
         const att = typeof inputProof === 'string' ? (inputProof.startsWith('0x')? inputProof : ('0x'+inputProof)) : toHex(inputProof);
-        log('🔐 Encrypted payload', { handle: hexShort(handle), attLen: att.length });
-        sendStatus.textContent = 'Sending tx…';
-        const tx = await contract.submitScore(pool, handle, att);
-        sendTx.textContent = 'TX: ' + tx.hash;
-        log('🚀 submitScore sent', { tx: tx.hash });
+        log('🔐 Encrypted publish payload', { hSalary, hRole, hRegion, attLen: att.length });
+        pubStatus.textContent = 'Sending tx…';
+        const tx = await contract.publish(hSalary, hRole, hRegion, att);
+        pubTx.textContent = 'TX: ' + tx.hash;
         const rec = await tx.wait();
-        log('✅ submitScore confirmed', { blockNumber: rec.blockNumber });
-        sendStatus.textContent = 'Done';
-      }catch(e){ console.error(e); logError('submitScore', e); sendStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+        // Parse PostPublished for new id
+        let newId = null;
+        for (const lg of rec.logs){ try { const p = IFACE.parseLog(lg); if (p?.name==='PostPublished'){ newId = p.args.id?.toString?.() || p.args[0]?.toString?.(); break; } } catch(e){} }
+        if (!newId){ log('ℹ️ PostPublished not found; check events or indexer', rec.logs); }
+        newPostIdEl.textContent = newId ?? '—';
+        pubStatus.textContent = 'Done';
+        log('✅ publish confirmed', { newId });
+      }catch(e){ console.error(e); logError('publish', e); pubStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
     });
 
-    // Recompute avg
-    recomputeBtn.addEventListener('click', async ()=>{
+    // ===== Reveal If Match =====
+    revealBtn.addEventListener('click', async ()=>{
       try{
         if(!contract) await connect();
-        const poolStr = $('#serviceId2').value || 'default';
-        const pool = toBytes32Id(poolStr);
-        log('🧮 recomputeAverage()', { poolStr, pool });
-        avgStatus.textContent = 'Submitting…';
-        const tx = await contract.recomputeAverage(pool);
-        log('🚀 recomputeAverage tx', { tx: tx.hash });
-        await tx.wait();
-        avgStatus.textContent = 'Recomputed';
-        log('✅ average recomputed');
-      }catch(e){ console.error(e); logError('recomputeAverage', e); avgStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
-    });
-
-    // Get handle
-    handleBtn.addEventListener('click', async ()=>{
-      try{
-        if(!contract) await connect();
-        const poolStr = $('#serviceId2').value || 'default';
-        const pool = toBytes32Id(poolStr);
-        avgStatus.textContent = 'Fetching…';
-        const h = await contract.avgHandle(pool);
-        avgHandleBox.textContent = String(h);
-        avgStatus.textContent = 'OK';
-        log('📦 avgHandle()', { poolStr, pool, handle: h });
-      }catch(e){ console.error(e); logError('avgHandle', e); avgStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
-    });
-
-    // Public decrypt (owner must have called makeAvgPublic)
-    publicDecBtn.addEventListener('click', async ()=>{
-      try{
-        const h = avgHandleBox.textContent.trim();
-        if(!h || h==='—') throw new Error('Get handle first');
-        decStatus.textContent = 'publicDecrypt…';
-        log('🔓 publicDecrypt begin', { handle: h });
+        const id = BigInt(revealPostId.value || '0');
+        const myR = Math.max(0, Math.min(65535, parseInt(myRole.value||'0')));
+        const myG = Math.max(0, Math.min(65535, parseInt(myRegion.value||'0')));
+        revStatus.textContent = 'Encrypting…';
         const r = await initRelayer();
-        const out = await r.publicDecrypt([h]);
-        const raw = out[h] ?? out[Object.keys(out).find(k=>k.toLowerCase()===h.toLowerCase())];
-        const val = Number(raw);
-        avgOut.textContent = isFinite(val) ? (val).toFixed(2) : String(raw);
-        log('🔎 publicDecrypt result', { raw, parsed: avgOut.textContent });
-        decStatus.textContent = 'Done';
-      }catch(e){ console.error(e); logError('publicDecrypt', e); decStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+        const enc = r.createEncryptedInput(getAddress(CONFIG.CONTRACT_ADDRESS), getAddress(address));
+        add16(enc, myR); add16(enc, myG);
+        const { handles, inputProof } = await enc.encrypt();
+        const [hRole, hRegion] = handles.map(h=> (typeof h==='string'? h : toHex(h)));
+        const att = typeof inputProof === 'string' ? (inputProof.startsWith('0x')? inputProof : ('0x'+inputProof)) : toHex(inputProof);
+        log('🔐 Encrypted reveal payload', { hRole, hRegion, attLen: att.length });
+        revStatus.textContent = 'Sending tx…';
+        const tx = await contract.revealIfMatch(id, hRole, hRegion, att);
+        const rec = await tx.wait();
+        let handle = null;
+        for (const lg of rec.logs){ try { const p = IFACE.parseLog(lg); if (p?.name==='SalaryRevealed'){ handle = (p.args.revealHandle || p.args[2]); handle = typeof handle==='string' ? handle : '0x'+Buffer.from(handle).toString('hex'); break; } } catch(e){} }
+        if(!handle) throw new Error('Reveal event not found');
+        revealHandleEl.textContent = handle;
+        revStatus.textContent = 'OK — handle captured';
+        log('✅ revealIfMatch confirmed', { handle });
+      }catch(e){ console.error(e); logError('revealIfMatch', e); revStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
     });
 
-    // User decrypt (private access via EIP-712)
+    // ===== User Decrypt (private) =====
     userDecBtn.addEventListener('click', async ()=>{
       try{
-        if(!window.ethereum) throw new Error('Connect wallet');
-        const h = avgHandleBox.textContent.trim();
-        if(!h || h==='—') throw new Error('Get handle first');
-        decStatus.textContent = 'EIP-712…';
+        const h = revealHandleEl.textContent.trim();
+        if(!h || h==='—') throw new Error('No handle');
+        decStatus.textContent = 'EIP‑712…';
         const r = await initRelayer();
         const kp = r.generateKeypair();
         const startTs = Math.floor(Date.now()/1000).toString();
         const days = '7';
         const eip = r.createEIP712(kp.publicKey, [getAddress(CONFIG.CONTRACT_ADDRESS)], startTs, days);
-        log('📝 EIP-712 prepared', { domain: eip.domain, validDays: days, startTs });
-        const provider2 = new BrowserProvider(window.ethereum);
-        const signer2 = await provider2.getSigner();
+        const provider2 = new BrowserProvider(window.ethereum); const signer2 = await provider2.getSigner();
         const signature = await signer2.signTypedData(
           eip.domain,
           { UserDecryptRequestVerification: eip.types.UserDecryptRequestVerification },
           eip.message
         );
-        log('✍️  EIP-712 signed', { sigLen: signature.length });
         decStatus.textContent = 'userDecrypt…';
         const out = await r.userDecrypt(
           [{ handle: h, contractAddress: getAddress(CONFIG.CONTRACT_ADDRESS) }],
@@ -362,43 +418,54 @@ setInterval(updateGradient,10);
         );
         const raw = out[h] ?? out[Object.keys(out).find(k=>k.toLowerCase()===h.toLowerCase())];
         const val = Number(raw);
-        avgOut.textContent = isFinite(val) ? (val).toFixed(2) : String(raw);
-        log('🔎 userDecrypt result', { raw, parsed: avgOut.textContent });
+        revealOut.textContent = isFinite(val) ? String(val) : String(raw);
         decStatus.textContent = 'Done';
+        log('🔎 userDecrypt result', { raw, parsed: revealOut.textContent });
       }catch(e){ console.error(e); logError('userDecrypt', e); decStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
     });
 
-    // Owner ops
-    setOwnerBtn.addEventListener('click', async ()=>{
-      try{
-        if(!contract) await connect();
-        const poolStr = $('#serviceId3').value || 'default';
-        const pool = toBytes32Id(poolStr);
-        const newOwner = getAddress($('#ownerAddr').value.trim());
-        ownerStatus.textContent = 'Submitting…';
-        log('👑 setPoolOwner()', { poolStr, pool, newOwner });
-        const tx = await contract.setPoolOwner(pool, newOwner);
-        log('🚀 setPoolOwner tx', { tx: tx.hash });
-        await tx.wait();
-        ownerStatus.textContent = 'Owner set';
-        log('✅ pool initialized / owner set');
-      }catch(e){ console.error(e); logError('setPoolOwner', e); ownerStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
-    });
-
+    // ===== Owner: make public & get salary handle =====
     makePublicBtn.addEventListener('click', async ()=>{
       try{
         if(!contract) await connect();
-        const poolStr = $('#serviceId3').value || 'default';
-        const pool = toBytes32Id(poolStr);
+        const id = BigInt(ownerPostId.value||'0');
         ownerStatus.textContent = 'Submitting…';
-        log('🌍 makeAvgPublic()', { poolStr, pool });
-        const tx = await contract.makeAvgPublic(pool);
-        log('🚀 makeAvgPublic tx', { tx: tx.hash });
+        const tx = await contract.makeSalaryPublic(id);
         await tx.wait();
-        ownerStatus.textContent = 'Avg is public now';
-        log('✅ avg made public');
-      }catch(e){ console.error(e); logError('makeAvgPublic', e); ownerStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+        ownerStatus.textContent = 'Salary is public';
+        log('✅ makeSalaryPublic done', { id: String(id) });
+      }catch(e){ console.error(e); logError('makeSalaryPublic', e); ownerStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
     });
+
+    getSalaryHandleBtn.addEventListener('click', async ()=>{
+      try{
+        if(!contract) await connect();
+        const id = BigInt(ownerPostId.value||'0');
+        ownerStatus.textContent = 'Fetching…';
+        const h = await contract.salaryHandle(id);
+        salaryHandleBox.textContent = String(h);
+        ownerStatus.textContent = 'OK';
+      }catch(e){ console.error(e); logError('salaryHandle', e); ownerStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+    });
+
+    publicDecBtn.addEventListener('click', async ()=>{
+      try{
+        const h = salaryHandleBox.textContent.trim();
+        if(!h || h==='—') throw new Error('Get salary handle first');
+        pubDecStatus.textContent = 'publicDecrypt…';
+        const r = await initRelayer();
+        const out = await r.publicDecrypt([h]);
+        const raw = out[h] ?? out[Object.keys(out).find(k=>k.toLowerCase()===h.toLowerCase())];
+        const val = Number(raw);
+        publicSalaryOut.textContent = isFinite(val) ? String(val) : String(raw);
+        pubDecStatus.textContent = 'Done';
+      }catch(e){ console.error(e); logError('publicDecrypt', e); pubDecStatus.textContent = 'Error: '+(e.reason||e.message||String(e)); }
+    });
+
+    // ===== Logs =====
+    copyBtn?.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(logBox.textContent); log('📋 logs copied'); }catch(e){ logError('copy logs', e);} });
+    clearBtn?.addEventListener('click', ()=>{ logBox.textContent=''; log('🧹 logs cleared'); });
+    window.addEventListener('unhandledrejection', (ev)=> logError('unhandledrejection', ev.reason));
   </script>
 </body>
 </html>
